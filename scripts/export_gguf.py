@@ -10,7 +10,7 @@ Prerequisites:
 
 Usage:
     # After training
-    python scripts/03_export_gguf.py --checkpoint checkpoints/variant_E/final/ --output models/gguf/
+    python scripts/export_gguf.py --checkpoint checkpoints/variant_D/final/ --output models/gguf/
 
     # Convert base tokenizer
     python scripts/03_export_gguf.py --checkpoint meta-llama/Llama-3.2-1B --output models/gguf/ --base-only

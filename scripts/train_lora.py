@@ -1,28 +1,29 @@
 #!/usr/bin/env python3
 """Staged LoRA training for dual-stream tokenization.
 
-Implements all 6 experimental groups:
+Implements all 5 experimental groups defined in configs/variants.yaml:
 - Control: Standard Llama-3.2-1B (no fine-tuning)
 - Variant A: ASR only
 - Variant B: TTS only
 - Variant C: ASR + TTS (mixed)
-- Variant E: TTS -> ASR -> TTS (primary hypothesis)
-- Variant G: ASR -> TTS
+- Variant D: TTS -> ASR -> TTS (primary hypothesis)
+- Variant E: ASR -> TTS
 
 Usage:
-    python scripts/02_train_lora.py --group E --data data/akan/ --output checkpoints/
+    python scripts/train_lora.py --group D --data data/akan/ --output checkpoints/
+    python scripts/train_lora.py --group D --config configs/variants.yaml --data data/akan/
 
 Designed for Colab T4 GPU execution.
 """
 
 import argparse
 import json
-import os
 from pathlib import Path
 from typing import Literal
 from dataclasses import dataclass
 
 import torch
+import yaml
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -34,7 +35,7 @@ from datasets import Dataset
 from peft import LoraConfig, get_peft_model, TaskType
 
 
-TrainingGroup = Literal["control", "A", "B", "C", "E", "G"]
+TrainingGroup = Literal["control", "A", "B", "C", "D", "E"]
 
 
 @dataclass
@@ -49,32 +50,41 @@ class TrainingConfig:
     max_length: int = 512
 
 
-GROUP_CONFIGS: dict[TrainingGroup, list[TrainingConfig]] = {
-    "control": [],
-    "A": [TrainingConfig("asr_only", "asr", 2e-4, 3)],
-    "B": [TrainingConfig("tts_only", "tts", 2e-4, 3)],
-    "C": [TrainingConfig("mixed", "mixed", 2e-4, 3)],
-    "E": [
-        TrainingConfig("tts_stage1", "tts", 2e-4, 2),
-        TrainingConfig("asr_stage2", "asr", 1e-4, 1),
-        TrainingConfig("tts_stage3", "tts", 5e-5, 1),
-    ],
-    "G": [
-        TrainingConfig("asr_stage1", "asr", 2e-4, 2),
-        TrainingConfig("tts_stage2", "tts", 1e-4, 1),
-    ],
-}
+def load_variant_configs(config_path: Path, group: str) -> tuple[list[TrainingConfig], dict]:
+    """Load variant stage configs and model settings from YAML.
+
+    Args:
+        config_path: Path to variants.yaml.
+        group: Variant key (e.g. 'D').
+
+    Returns:
+        Tuple of (stage configs list, lora settings dict).
+    """
+    with open(config_path, "r") as f:
+        raw = yaml.safe_load(f)
+
+    variant = raw["variants"].get(group)
+    if variant is None:
+        raise ValueError(f"Unknown variant '{group}'. Available: {list(raw['variants'].keys())}")
+
+    stages = [
+        TrainingConfig(
+            name=s["name"],
+            data_split=s["data_split"],
+            learning_rate=float(s["learning_rate"]),
+            epochs=int(s["epochs"]),
+            batch_size=int(s.get("batch_size", 4)),
+            max_length=int(s.get("max_length", 512)),
+        )
+        for s in variant.get("stages", [])
+    ]
+
+    lora_cfg = raw.get("model", {}).get("lora", {})
+    return stages, lora_cfg
 
 
 def load_jsonl_texts(jsonl_path: Path) -> list[str]:
-    """Load texts from JSONL file.
-
-    Args:
-        jsonl_path: Path to JSONL file with 'transcription' or 'text' field.
-
-    Returns:
-        List of text strings.
-    """
+    """Load texts from JSONL file."""
     texts = []
     with open(jsonl_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -89,16 +99,7 @@ def load_jsonl_texts(jsonl_path: Path) -> list[str]:
 
 
 def prepare_dataset(texts: list[str], tokenizer, max_length: int = 512) -> Dataset:
-    """Prepare dataset for training.
-
-    Args:
-        texts: List of text samples.
-        tokenizer: Tokenizer for encoding.
-        max_length: Maximum sequence length.
-
-    Returns:
-        HuggingFace Dataset.
-    """
+    """Prepare HuggingFace Dataset from a list of texts."""
 
     def tokenize_function(examples):
         return tokenizer(
@@ -110,23 +111,13 @@ def prepare_dataset(texts: list[str], tokenizer, max_length: int = 512) -> Datas
         )
 
     dataset = Dataset.from_dict({"text": texts})
-    tokenized_dataset = dataset.map(tokenize_function, batched=True, remove_columns=["text"])
-    return tokenized_dataset
+    return dataset.map(tokenize_function, batched=True, remove_columns=["text"])
 
 
 def train_stage(
     model, tokenizer, texts: list[str], config: TrainingConfig, output_dir: Path, stage_num: int
 ) -> None:
-    """Execute a single training stage.
-
-    Args:
-        model: PEFT model to train.
-        tokenizer: Tokenizer for encoding.
-        texts: Training texts.
-        config: Stage configuration.
-        output_dir: Output directory for checkpoints.
-        stage_num: Stage number for naming.
-    """
+    """Execute a single training stage."""
     print(f"\n=== Stage {stage_num}: {config.name} ===")
     print(f"  Data split: {config.data_split}")
     print(f"  Learning rate: {config.learning_rate}")
@@ -149,25 +140,28 @@ def train_stage(
         warmup_ratio=0.1,
     )
 
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
-
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=dataset,
-        data_collator=data_collator,
+        data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
     )
 
     trainer.train()
     print(f"Stage {stage_num} complete.")
 
 
-def train_variant_e(
-    model_id: str, data_dir: Path, output_dir: Path, configs: list[TrainingConfig]
+def train_variant(
+    model_id: str,
+    data_dir: Path,
+    output_dir: Path,
+    configs: list[TrainingConfig],
+    lora_cfg: dict,
 ) -> None:
-    """Train Variant E: TTS -> ASR -> TTS staged training.
+    """Train a variant through one or more staged training runs.
 
-    Rationale: Anchor on formal logic, adapt to noise, refine logic.
+    Handles both single-stage variants (A, B, C) and multi-stage variants
+    (D: TTS->ASR->TTS, E: ASR->TTS) with the same code path.
     """
     print(f"\nLoading model: {model_id}")
 
@@ -182,11 +176,11 @@ def train_variant_e(
 
     lora_config = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
-        r=16,
-        lora_alpha=32,
-        lora_dropout=0.1,
-        bias="none",
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
+        r=lora_cfg.get("r", 16),
+        lora_alpha=lora_cfg.get("lora_alpha", 32),
+        lora_dropout=lora_cfg.get("lora_dropout", 0.1),
+        bias=lora_cfg.get("bias", "none"),
+        target_modules=lora_cfg.get("target_modules", ["q_proj", "k_proj", "v_proj", "o_proj"]),
     )
 
     model = get_peft_model(model, lora_config)
@@ -195,16 +189,13 @@ def train_variant_e(
     asr_file = data_dir / "aka_asr_train.jsonl"
     tts_file = data_dir / "twi_tts_train.jsonl"
 
-    if not asr_file.exists():
-        raise FileNotFoundError(f"ASR data not found: {asr_file}")
-    if not tts_file.exists():
-        raise FileNotFoundError(f"TTS data not found: {tts_file}")
+    asr_texts = load_jsonl_texts(asr_file) if asr_file.exists() else []
+    tts_texts = load_jsonl_texts(tts_file) if tts_file.exists() else []
 
-    asr_texts = load_jsonl_texts(asr_file)
-    tts_texts = load_jsonl_texts(tts_file)
-
-    print(f"Loaded {len(asr_texts)} ASR samples")
-    print(f"Loaded {len(tts_texts)} TTS samples")
+    if asr_texts:
+        print(f"Loaded {len(asr_texts)} ASR samples")
+    if tts_texts:
+        print(f"Loaded {len(tts_texts)} TTS samples")
 
     for stage_num, config in enumerate(configs, 1):
         if config.data_split == "asr":
@@ -214,56 +205,10 @@ def train_variant_e(
         else:
             texts = asr_texts + tts_texts
 
+        if not texts:
+            raise ValueError(f"No training data found for split '{config.data_split}'")
+
         train_stage(model, tokenizer, texts, config, output_dir, stage_num)
-
-    final_dir = output_dir / "final"
-    model.save_pretrained(final_dir)
-    tokenizer.save_pretrained(final_dir)
-    print(f"\nFinal model saved to: {final_dir}")
-
-
-def train_variant_single(
-    model_id: str, data_dir: Path, output_dir: Path, config: TrainingConfig
-) -> None:
-    """Train a single-stage variant (A, B, C)."""
-    print(f"\nLoading model: {model_id}")
-
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    tokenizer.pad_token = tokenizer.eos_token
-
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-        device_map="auto",
-    )
-
-    lora_config = LoraConfig(
-        task_type=TaskType.CAUSAL_LM,
-        r=16,
-        lora_alpha=32,
-        lora_dropout=0.1,
-        bias="none",
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
-    )
-
-    model = get_peft_model(model, lora_config)
-    model.print_trainable_parameters()
-
-    asr_file = data_dir / "aka_asr_train.jsonl"
-    tts_file = data_dir / "twi_tts_train.jsonl"
-
-    texts = []
-    if config.data_split in ["asr", "mixed"]:
-        if asr_file.exists():
-            texts.extend(load_jsonl_texts(asr_file))
-    if config.data_split in ["tts", "mixed"]:
-        if tts_file.exists():
-            texts.extend(load_jsonl_texts(tts_file))
-
-    if not texts:
-        raise ValueError(f"No training data found for {config.data_split}")
-
-    train_stage(model, tokenizer, texts, config, output_dir, 1)
 
     final_dir = output_dir / "final"
     model.save_pretrained(final_dir)
@@ -276,16 +221,24 @@ def main() -> None:
     parser.add_argument(
         "--group",
         type=str,
-        default="E",
-        choices=["control", "A", "B", "C", "E", "G"],
-        help="Training group to execute",
+        default="D",
+        choices=["control", "A", "B", "C", "D", "E"],
+        help="Training variant to execute",
     )
-    parser.add_argument("--model", type=str, default="meta-llama/Llama-3.2-1B")
+    parser.add_argument("--model", type=str, default=None, help="Override base model ID from config")
     parser.add_argument("--data", type=str, default="data/akan/")
     parser.add_argument("--output", type=str, default="checkpoints/")
-    parser.add_argument("--epochs", type=int, default=None, help="Override epochs per stage")
-    parser.add_argument("--lr", type=float, default=None, help="Override learning rate")
+    parser.add_argument(
+        "--config",
+        type=str,
+        default="configs/variants.yaml",
+        help="Path to variants YAML config",
+    )
     args = parser.parse_args()
+
+    config_path = Path(args.config)
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config not found: {config_path}")
 
     output_dir = Path(args.output) / f"variant_{args.group}"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -294,30 +247,23 @@ def main() -> None:
     if not data_dir.exists():
         raise FileNotFoundError(f"Data directory not found: {data_dir}")
 
-    configs = GROUP_CONFIGS[args.group]
+    configs, lora_cfg = load_variant_configs(config_path, args.group)
 
-    if args.epochs is not None:
-        for c in configs:
-            c.epochs = args.epochs
-    if args.lr is not None:
-        for c in configs:
-            c.learning_rate = args.lr
+    with open(config_path, "r") as f:
+        raw_config = yaml.safe_load(f)
+    model_id = args.model or raw_config.get("model", {}).get("base_id", "meta-llama/Llama-3.2-1B")
 
-    print(f"Training group: {args.group}")
-    print(f"Base model: {args.model}")
-    print(f"Data: {args.data}")
-    print(f"Output: {output_dir}")
-    print(f"Stages: {len(configs) if configs else 'None (control)'}")
+    print(f"Variant:    {args.group}")
+    print(f"Base model: {model_id}")
+    print(f"Data:       {args.data}")
+    print(f"Output:     {output_dir}")
+    print(f"Stages:     {len(configs) if configs else 'None (control)'}")
 
     if args.group == "control":
         print("Control group: No training required. Use base model directly.")
         return
 
-    if args.group == "E":
-        train_variant_e(args.model, data_dir, output_dir, configs)
-    else:
-        train_variant_single(args.model, data_dir, output_dir, configs[0])
-
+    train_variant(model_id, data_dir, output_dir, configs, lora_cfg)
     print("\n=== Training complete ===")
 
 

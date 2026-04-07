@@ -27,8 +27,8 @@ We will evaluate six training regimes to identify the optimal balance of robustn
 | **Variant A** | ASR Only | Pure robustness to conversational noise. |
 | **Variant B** | TTS Only | Maximum semantic density and logic. |
 | **Variant C** | ASR + TTS (Mixed) | Standard joint-distribution training. |
-| **Variant E** | **TTS → ASR → TTS** | **Primary Hypothesis:** Anchor logic, adapt to noise, refine logic. |
-| **Variant G** | ASR → TTS | Test if phonetic grounding aids later reasoning. |
+| **Variant D** | **TTS → ASR → TTS** | **Primary Hypothesis:** Anchor logic, adapt to noise, refine logic. |
+| **Variant E** | ASR → TTS | Test if phonetic grounding aids later reasoning. |
 
 ## 5. Engineering & Hardware Strategy
 * **Training:** Google Colab (T4 GPU) for LoRA embedding alignment.
@@ -37,6 +37,6 @@ We will evaluate six training regimes to identify the optimal balance of robustn
 
 ## 6. Roadmap
 * **Phase I (Audit):** Measure baseline Token Tax across WAXAL subsets.
-* **Phase II (Train):** Staged LoRA training for Variant E and others.
+* **Phase II (Train):** Staged LoRA training for Variant D and others.
 * **Phase III (Patch):** Align tokens and export to GGUF format.
 * **Phase IV (Release):** GitHub launch and hardware benchmarking in Ghana.

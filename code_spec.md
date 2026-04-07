@@ -11,7 +11,7 @@ WAXAL-Dual-Core/
 ├── data/                  # WAXAL subsets (Akan, Yoruba, Swahili)
 ├── scripts/               # Research Pipeline
 │   ├── 01_train_bpe.py    # Vocab generation (ASR vs TTS)
-│   ├── 02_train_lora.py   # Staged Embedding Training (Variant E logic)
+│   ├── 02_train_lora.py   # Staged Embedding Training (Variant D logic)
 │   └── 03_export_gguf.py  # Llama.cpp quantization
 ├── waxal_refined/         # Edge Python Library
 │   ├── router.py          # Regex-based heuristic classifier
@@ -20,10 +20,10 @@ WAXAL-Dual-Core/
 ```
 
 ## 2. Phase 1: Vocabulary & LoRA (Cloud)
-### 2.1 Staged Training (Variant E)
+### 2.1 Staged Training (Variant D)
 ```python
 # logic for 02_train_lora.py
-def train_variant_e(model, datasets):
+def train_variant_d(model, datasets):
     # Stage 1: Anchor on Formal Logic
     trainer_tts = Trainer(model, datasets['tts'], lr=2e-4)
     trainer_tts.train()

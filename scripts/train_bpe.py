@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Train BPE vocabularies for ASR and TTS streams.
+"""Train a unified BPE vocabulary for dual-stream tokenization.
 
-Separate vocabularies are trained for:
-- ASR stream: Noisy, conversational, code-switching text
-- TTS stream: Clean, formal, grammatically correct text
+Trains a single BPE tokenizer on combined ASR+TTS data so both streams
+share a compatible embedding space when fine-tuning the same Llama base
+model. Stream-specific token statistics are saved as metadata so the
+DualCoreTokenizer knows which tokens are ASR- or TTS-dominant.
 
 Usage:
-    python scripts/01_train_bpe.py --input data/akan/ --output models/tokenizers/ --vocab-size 8000
+    python scripts/train_bpe.py --input data/akan/ --output models/tokenizers/ --vocab-size 8000
 """
 
 import argparse
@@ -15,7 +16,6 @@ from pathlib import Path
 from collections import Counter
 from typing import Iterator
 
-from tokenizers import Trie, AddedToken
 from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
@@ -23,14 +23,7 @@ from tokenizers import Tokenizer
 
 
 def read_jsonl_texts(jsonl_path: Path) -> Iterator[str]:
-    """Extract transcription/text from JSONL file.
-
-    Args:
-        jsonl_path: Path to JSONL file with 'transcription' or 'text' field.
-
-    Yields:
-        Text content from each line.
-    """
+    """Yield transcription/text strings from a JSONL file."""
     with open(jsonl_path, "r", encoding="utf-8") as f:
         for line in f:
             try:
@@ -42,21 +35,39 @@ def read_jsonl_texts(jsonl_path: Path) -> Iterator[str]:
                 continue
 
 
-def train_bpe_tokenizer(
-    texts: Iterator[str], vocab_size: int, output_path: Path, language: str, stream_type: str
+def collect_token_counts(texts: list[str], tokenizer: Tokenizer) -> Counter:
+    """Count token frequencies across a list of texts."""
+    counts: Counter = Counter()
+    for text in texts:
+        encoding = tokenizer.encode(text)
+        counts.update(encoding.tokens)
+    return counts
+
+
+def train_unified_tokenizer(
+    asr_texts: list[str],
+    tts_texts: list[str],
+    vocab_size: int,
+    output_dir: Path,
+    language: str,
 ) -> dict:
-    """Train a BPE tokenizer on the given texts.
+    """Train one BPE tokenizer on combined ASR+TTS data.
+
+    Saves the tokenizer JSON and a stream_token_stats.json file that
+    records which tokens are dominant in each stream.
 
     Args:
-        texts: Iterator of text samples.
+        asr_texts: Texts from the ASR (spontaneous) split.
+        tts_texts: Texts from the TTS (formal) split.
         vocab_size: Target vocabulary size.
-        output_path: Path to save tokenizer JSON.
+        output_dir: Directory to save outputs.
         language: Language code for metadata.
-        stream_type: 'asr' or 'tts' for metadata.
 
     Returns:
-        Training statistics.
+        Training statistics dict.
     """
+    all_texts = asr_texts + tts_texts
+
     tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
     tokenizer.pre_tokenizer = Whitespace()
 
@@ -66,26 +77,57 @@ def train_bpe_tokenizer(
         show_progress=True,
     )
 
-    texts_list = list(texts)
-    print(f"Training on {len(texts_list)} samples...")
+    print(f"Training unified BPE on {len(all_texts)} samples ({len(asr_texts)} ASR + {len(tts_texts)} TTS)...")
+    tokenizer.train_from_iterator(all_texts, trainer=trainer)
 
-    tokenizer.train_from_iterator(texts_list, trainer=trainer)
+    tokenizer_path = output_dir / "unified_tokenizer.json"
+    tokenizer.save(str(tokenizer_path))
+    print(f"Unified tokenizer saved to: {tokenizer_path}")
 
-    tokenizer.save(str(output_path))
+    print("Computing per-stream token statistics...")
+    asr_counts = collect_token_counts(asr_texts, tokenizer)
+    tts_counts = collect_token_counts(tts_texts, tokenizer)
 
     vocab = tokenizer.get_vocab()
-    print(f"Vocabulary size: {len(vocab)}")
+    stream_stats = {}
+    for token in vocab:
+        asr_freq = asr_counts.get(token, 0)
+        tts_freq = tts_counts.get(token, 0)
+        total = asr_freq + tts_freq
+        if total == 0:
+            dominant = "shared"
+        elif asr_freq / total > 0.7:
+            dominant = "asr"
+        elif tts_freq / total > 0.7:
+            dominant = "tts"
+        else:
+            dominant = "shared"
+        stream_stats[token] = {
+            "asr_freq": asr_freq,
+            "tts_freq": tts_freq,
+            "dominant": dominant,
+        }
 
+    stats_path = output_dir / "stream_token_stats.json"
+    with open(stats_path, "w", encoding="utf-8") as f:
+        json.dump(stream_stats, f, ensure_ascii=False, indent=2)
+    print(f"Stream token stats saved to: {stats_path}")
+
+    dominant_counts = Counter(v["dominant"] for v in stream_stats.values())
     return {
         "vocab_size": len(vocab),
-        "num_samples": len(texts_list),
+        "total_samples": len(all_texts),
+        "asr_samples": len(asr_texts),
+        "tts_samples": len(tts_texts),
         "language": language,
-        "stream_type": stream_type,
+        "tokenizer_path": str(tokenizer_path),
+        "stream_token_stats_path": str(stats_path),
+        "token_dominance": dict(dominant_counts),
     }
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train BPE vocabularies")
+    parser = argparse.ArgumentParser(description="Train unified BPE vocabulary")
     parser.add_argument("--input", type=str, default="data/akan/")
     parser.add_argument("--output", type=str, default="models/tokenizers/")
     parser.add_argument("--vocab-size", type=int, default=8000)
@@ -99,55 +141,37 @@ def main() -> None:
     if not input_dir.exists():
         raise FileNotFoundError(f"Input directory not found: {input_dir}")
 
-    print(f"Training BPE vocabularies for {args.language}...")
-    print(f"  Input: {input_dir}")
-    print(f"  Output: {output_dir}")
-    print(f"  Vocab size: {args.vocab_size}")
-    print()
+    lang_prefix = "twi" if args.language == "akan" else args.language
+    asr_file = input_dir / ("aka_asr_train.jsonl" if args.language == "akan" else f"{args.language}_asr_train.jsonl")
+    tts_file = input_dir / f"{lang_prefix}_tts_train.jsonl"
 
-    stats = {}
+    asr_texts, tts_texts = [], []
 
-    for stream_type in ["asr", "tts"]:
-        config_name = (
-            f"{args.language.split('_')[0]}_{stream_type}" if stream_type == "asr" else None
-        )
-        if stream_type == "tts":
-            if args.language == "akan":
-                pattern = "twi_tts"
-            else:
-                pattern = f"{args.language}_tts"
-        else:
-            pattern = (
-                f"{args.language.split('_')[0]}_asr"
-                if "_" in args.language
-                else f"{args.language}_asr"
-            )
+    if asr_file.exists():
+        asr_texts = list(read_jsonl_texts(asr_file))
+        print(f"ASR: {len(asr_texts)} samples from {asr_file}")
+    else:
+        print(f"WARNING: ASR file not found: {asr_file}")
 
-        train_file = input_dir / f"{pattern}_train.jsonl"
-        if not train_file.exists():
-            print(f"WARNING: {train_file} not found, skipping {stream_type.upper()}")
-            continue
+    if tts_file.exists():
+        tts_texts = list(read_jsonl_texts(tts_file))
+        print(f"TTS: {len(tts_texts)} samples from {tts_file}")
+    else:
+        print(f"WARNING: TTS file not found: {tts_file}")
 
-        print(f"--- Training {stream_type.upper()} tokenizer ---")
+    if not asr_texts and not tts_texts:
+        raise ValueError("No training data found. Run scripts/download.py first.")
 
-        output_file = output_dir / f"{stream_type}_tokenizer.json"
-        stream_stats = train_bpe_tokenizer(
-            texts=read_jsonl_texts(train_file),
-            vocab_size=args.vocab_size,
-            output_path=output_file,
-            language=args.language,
-            stream_type=stream_type,
-        )
-        stats[stream_type] = stream_stats
-        print(f"Saved to: {output_file}")
-        print()
+    stats = train_unified_tokenizer(asr_texts, tts_texts, args.vocab_size, output_dir, args.language)
 
-    stats_file = output_dir / "training_stats.json"
-    with open(stats_file, "w", encoding="utf-8") as f:
+    summary_path = output_dir / "training_stats.json"
+    with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(stats, f, indent=2)
 
-    print(f"Training statistics saved to: {stats_file}")
-    print("Training complete!")
+    print(f"\nTraining stats saved to: {summary_path}")
+    print(f"Vocab size: {stats['vocab_size']}")
+    print(f"Token dominance: {stats['token_dominance']}")
+    print("Done.")
 
 
 if __name__ == "__main__":

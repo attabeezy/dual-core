@@ -61,15 +61,15 @@ python scripts/download.py --lang akan --output data/
 # 2. Train BPE vocabularies
 python scripts/train_bpe.py --input data/akan/ --output models/tokenizers/
 
-# 3. Train LoRA variant (E recommended)
-python scripts/train_lora.py --group E --data data/akan/
+# 3. Train LoRA variant (D recommended)
+python scripts/train_lora.py --group D --data data/akan/
 
 # 4. Benchmark results
 python benchmark.py --tokenizer meta-llama/Llama-3.2-1B \
     --test-file data/akan/twi_tts_test.jsonl --baseline
 
 # 5. Export to GGUF (requires llama.cpp)
-python scripts/export_gguf.py --checkpoint checkpoints/variant_E/final/
+python scripts/export_gguf.py --checkpoint checkpoints/variant_D/final/
 ```
 
 ## Dataset
@@ -96,8 +96,8 @@ python scripts/export_gguf.py --checkpoint checkpoints/variant_E/final/
 | **Variant A** | ASR Only | Pure robustness to conversational noise |
 | **Variant B** | TTS Only | Maximum semantic density and logic |
 | **Variant C** | ASR + TTS (Mixed) | Standard joint-distribution training |
-| **Variant E** | TTS → ASR → TTS | **Primary Hypothesis**: Anchor logic, adapt to noise, refine logic |
-| **Variant G** | ASR → TTS | Test if phonetic grounding aids later reasoning |
+| **Variant D** | TTS → ASR → TTS | **Primary Hypothesis**: Anchor logic, adapt to noise, refine logic |
+| **Variant E** | ASR → TTS | Test if phonetic grounding aids later reasoning |
 
 ## Metrics
 
@@ -181,7 +181,7 @@ After training, compare with baseline:
 python benchmark.py --tokenizer meta-llama/Llama-3.2-1B --test-file data/akan/test.jsonl --baseline
 
 # Trained
-python benchmark.py --model checkpoints/variant_E/final/ --test-file data/akan/test.jsonl --huggingface
+python benchmark.py --model checkpoints/variant_D/final/ --test-file data/akan/test.jsonl --huggingface
 ```
 
 Expected improvement:
