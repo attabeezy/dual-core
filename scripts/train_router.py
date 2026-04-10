@@ -85,7 +85,7 @@ def train_classifier(texts: list[str], labels: list[int]):
             max_features=20000,
             sublinear_tf=True,
         )),
-        ("clf", LogisticRegression(max_iter=1000, C=1.0)),
+        ("clf", LogisticRegression(max_iter=1000, C=1.0, class_weight="balanced")),
     ])
 
     scores = cross_val_score(pipeline, texts, labels, cv=5, scoring="f1_macro")
@@ -128,13 +128,29 @@ def main() -> None:
 
     print(f"\nClassifier saved to: {output_path}")
 
-    sample_asr = "uhm chale me dwo o"
-    sample_tts = "The president delivered a formal address to the assembly"
-    pred_asr = classifier.predict([sample_asr])[0]
-    pred_tts = classifier.predict([sample_tts])[0]
-    print(f"\nSanity check:")
-    print(f"  '{sample_asr}' -> {'robust' if pred_asr == 0 else 'logic'}")
-    print(f"  '{sample_tts}' -> {'robust' if pred_tts == 0 else 'logic'}")
+    print(f"\nSanity check (real samples from test set):")
+    prefixes = LANG_FILE_PREFIXES[args.language]
+    for split_name, label_expected, prefix_key in [("ASR", 0, "asr"), ("TTS", 1, "tts")]:
+        prefix = prefixes.get(prefix_key)
+        if not prefix:
+            continue
+        test_path = data_dir / f"{prefix}_test.jsonl"
+        if not test_path.exists():
+            print(f"  [{split_name}] test file not found: {test_path}")
+            continue
+        with open(test_path, "r", encoding="utf-8") as f:
+            for line in f:
+                try:
+                    item = json.loads(line.strip())
+                    sample = item.get("transcription") or item.get("text", "")
+                    if sample:
+                        pred = classifier.predict([sample])[0]
+                        status = "OK" if pred == label_expected else "WRONG"
+                        label_name = "robust" if pred == 0 else "logic"
+                        print(f"  [{split_name}] [{status}] '{sample[:60]}' -> {label_name}")
+                        break
+                except json.JSONDecodeError:
+                    continue
 
 
 if __name__ == "__main__":
