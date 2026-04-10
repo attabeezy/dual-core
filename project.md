@@ -8,13 +8,13 @@
 
 SOMAX is a research-to-production framework designed to eliminate the **"Tokenization Tax"** — the structural inefficiency where African languages require significantly more tokens than English, leading to higher latency, increased cost, and degraded reasoning.
 
-By leveraging the **Google WAXAL dataset (Feb 2026)**, SOMAX introduces a dual-stream processing architecture that treats spontaneous speech and formal text as fundamentally different linguistic regimes, sharing a unified vocabulary for maximum embedding efficiency.
+By leveraging **Google WAXAL** (spontaneous Twi/Akan ASR, ~100k) and the **Ghana NLP Pristine-Twi dataset** (~999k clean formal Twi text), SOMAX introduces a dual-stream processing architecture that treats spontaneous speech and formal text as fundamentally different linguistic regimes, sharing a unified vocabulary for maximum embedding efficiency.
 
 ---
 
 ## 2. Problem Statement
 
-Modern LLM tokenizers are optimized for English-heavy corpora. For African languages like Akan, Yoruba, and Swahili:
+Modern LLM tokenizers are optimized for English-heavy corpora. For African languages like Twi (Akan):
 
 - An English sentence (~10 tokens) can become 40+ tokens in the target language.
 - **Consequences:** Higher latency (edge devices), higher costs, weaker reasoning (semantic fragmentation).
@@ -25,10 +25,10 @@ Modern LLM tokenizers are optimized for English-heavy corpora. For African langu
 
 ## 3. Core Insight: Linguistic Duality
 
-The WAXAL dataset contains two fundamentally different distributions:
+Two Twi data sources capture fundamentally different linguistic distributions:
 
-1. **WAXAL-ASR (Spontaneous):** Noisy, code-switching (e.g., Twi + English), fillers ("uhm", "chale"), and disfluencies.
-2. **WAXAL-TTS (Formal):** Clean, structured, grammatically correct, and semantically dense scripts.
+1. **WAXAL `aka_asr` (Spontaneous):** Noisy, code-switching (e.g., Twi + English), fillers ("uhm", "chale"), and disfluencies. ~100k transcriptions.
+2. **Ghana NLP Pristine-Twi (Formal):** Clean, structured, grammatically correct Twi text. ~999k samples — eliminates the TTS data imbalance that plagued the original WAXAL-only approach.
 
 ---
 
@@ -49,7 +49,7 @@ The WAXAL dataset contains two fundamentally different distributions:
 
 ```
 somax/
-├── data/                  # WAXAL subsets (Akan, Yoruba, Swahili) — gitignored
+├── data/                  # Twi datasets (WAXAL ASR + Ghana NLP pristine-twi) — gitignored
 ├── models/                # Trained tokenizers, routers, GGUF files — gitignored
 ├── checkpoints/           # LoRA training checkpoints — gitignored
 ├── scripts/               # Research pipeline
@@ -81,13 +81,11 @@ somax/
 
 All scripts use a shared prefix mapping that mirrors `download.py`:
 
-| Language | ASR prefix | TTS prefix |
-|----------|------------|------------|
-| akan     | `aka_asr`  | `twi_tts`  |
-| yoruba   | (none)     | `yor_tts`  |
-| swahili  | (none)     | `swa_tts`  |
+| Language | ASR prefix | Formal text prefix |
+|----------|------------|--------------------|
+| twi      | `aka_asr`  | `pristine_twi`     |
 
-Files follow the pattern `{prefix}_{split}.jsonl` (e.g. `aka_asr_train.jsonl`, `twi_tts_test.jsonl`).
+Files follow the pattern `{prefix}_{split}.jsonl` (e.g. `aka_asr_train.jsonl`, `pristine_twi_test.jsonl`).
 
 ---
 
@@ -96,10 +94,14 @@ Files follow the pattern `{prefix}_{split}.jsonl` (e.g. `aka_asr_train.jsonl`, `
 ### 7.1 Dataset Download (`download.py`)
 
 ```bash
-python scripts/download.py --lang akan --output data/
+python scripts/download.py --output data/
 ```
 
-Downloads ASR and TTS splits from `google/WaxalNLP` on HuggingFace and saves as JSONL.
+Downloads two sources:
+- **WAXAL `aka_asr`** from `google/WaxalNLP` — spontaneous Twi/Akan speech transcriptions
+- **Pristine-Twi** from `ghananlpcommunity/pristine-twi` — 999k clean formal Twi text, auto-split 90/5/5 into train/validation/test
+
+All saved as JSONL under `data/twi/`.
 
 ### 7.2 BPE Tokenizer (`train_bpe.py`)
 
@@ -117,7 +119,7 @@ Outputs:
 - `models/tokenizers/{lang}/stream_token_stats.json` — per-token ASR/TTS dominance metadata
 
 ```bash
-python scripts/train_bpe.py --input data/akan/ --output models/tokenizers/ --language akan
+python scripts/train_bpe.py --input data/twi/ --output models/tokenizers/ --language twi
 ```
 
 ### 7.3 Router Training (`train_router.py`)
@@ -125,7 +127,7 @@ python scripts/train_bpe.py --input data/akan/ --output models/tokenizers/ --lan
 Trains a TF-IDF + logistic regression classifier on WAXAL ASR/TTS splits. Character n-grams (2–4), max 20k features. 5-fold cross-validation reported. Saved as `models/router/{lang}_router.pkl`.
 
 ```bash
-python scripts/train_router.py --data data/akan/ --output models/router/ --language akan
+python scripts/train_router.py --data data/twi/ --output models/router/ --language twi
 ```
 
 ### 7.4 Staged LoRA Training (`train_lora.py`)
@@ -143,12 +145,12 @@ This ensures fertility gains measured in benchmarks reflect real inference behav
 # Recommended — uses WAXAL tokenizer
 python scripts/train_lora.py \
     --group D \
-    --data data/akan/ \
+    --data data/twi/ \
     --output checkpoints/ \
-    --tokenizer-path models/tokenizers/akan/unified_tokenizer.json
+    --tokenizer-path models/tokenizers/twi/unified_tokenizer.json
 
 # Control group — uses Llama tokenizer directly
-python scripts/train_lora.py --group control --data data/akan/ --output checkpoints/
+python scripts/train_lora.py --group control --data data/twi/ --output checkpoints/
 ```
 
 Variant D staged training sequence:
@@ -168,7 +170,7 @@ Variant D staged training sequence:
 Loads a trained `.pkl` classifier when available; falls back to a regex heuristic (6 conversational markers + length < 5 words) when no model file exists.
 
 ```python
-router = WAXALRouter(language="akan", model_dir="models/router/")
+router = WAXALRouter(language="twi", model_dir="models/router/")
 router.classify("uhm chale me dwo")                          # → "robust"
 router.classify("The president delivered a formal address")  # → "logic"
 ```
@@ -181,8 +183,8 @@ Wraps the unified WAXAL `PreTrainedTokenizerFast` with the `WAXALRouter` for str
 from somax import DualCoreTokenizer
 
 tokenizer = DualCoreTokenizer(
-    tokenizer_path="models/tokenizers/akan/unified_tokenizer.json",
-    language="akan",
+    tokenizer_path="models/tokenizers/twi/unified_tokenizer.json",
+    language="twi",
 )
 
 tokenizer.classify("uhm chale me dwo o")           # → "robust"
@@ -212,8 +214,8 @@ python scripts/export_gguf.py \
 ```bash
 python scripts/benchmark_fertility.py \
     --tokenizer meta-llama/Llama-3.2-1B \
-    --waxal-tokenizer models/tokenizers/akan/unified_tokenizer.json \
-    --test-file data/akan/twi_tts_test.jsonl \
+    --waxal-tokenizer models/tokenizers/twi/unified_tokenizer.json \
+    --test-file data/twi/pristine_twi_test.jsonl \
     --compare
 ```
 
@@ -224,7 +226,7 @@ Target: ≥30% fertility reduction. Expected: baseline ~4.0 → WAXAL ~2.8 token
 ```bash
 python scripts/benchmark_inference.py \
     --model models/gguf/model-Q4_K_M.gguf \
-    --test-file data/akan/twi_tts_test.jsonl
+    --test-file data/twi/pristine_twi_test.jsonl
 ```
 
 Measures tokens/second, latency (mean ± std), and memory usage (MB).

@@ -21,12 +21,12 @@ class WAXALRouter:
     if the model file is not found.
 
     Args:
-        language: Target language (e.g. 'akan').
+        language: Target language (e.g. 'twi').
         model_dir: Directory containing trained router .pkl files.
                    Defaults to 'models/router/' relative to cwd.
 
     Example:
-        >>> router = WAXALRouter(language="akan")
+        >>> router = WAXALRouter(language="twi")
         >>> router.classify("uhm chale me dwo")
         'robust'
         >>> router.classify("The formal declaration states...")
@@ -42,7 +42,7 @@ class WAXALRouter:
         r"\buna\b",
     ]
 
-    def __init__(self, language: str = "akan", model_dir: str | Path = "models/router/"):
+    def __init__(self, language: str = "twi", model_dir: str | Path = "models/router/"):
         self.language = language
         self._classifier = None
         self._compiled_markers = [

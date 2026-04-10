@@ -6,7 +6,7 @@ ASR/TTS split to distinguish conversational from formal text. The resulting
 model replaces the regex heuristic in WAXALRouter for data-driven routing.
 
 Usage:
-    python scripts/train_router.py --data data/akan/ --output models/router/ --language akan
+    python scripts/train_router.py --data data/twi/ --output models/router/ --language twi
 """
 
 import argparse
@@ -16,9 +16,7 @@ from pathlib import Path
 
 # Mirrors download.py DATASET_CONFIGS — must stay in sync.
 LANG_FILE_PREFIXES: dict[str, dict[str, str | None]] = {
-    "akan":    {"asr": "aka_asr", "tts": "twi_tts"},
-    "yoruba":  {"asr": None,      "tts": "yor_tts"},
-    "swahili": {"asr": None,      "tts": "swa_tts"},
+    "twi": {"asr": "aka_asr", "tts": "pristine_twi"},
 }
 
 
@@ -29,7 +27,7 @@ def load_labeled_texts(data_dir: Path, language: str) -> tuple[list[str], list[i
 
     Args:
         data_dir: Directory containing JSONL files.
-        language: Language code (e.g. 'akan').
+        language: Language code (e.g. 'twi').
 
     Returns:
         Tuple of (texts, labels).
@@ -97,9 +95,9 @@ def train_classifier(texts: list[str], labels: list[int]):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train WAXALRouter stream classifier")
-    parser.add_argument("--data", type=str, default="data/akan/")
+    parser.add_argument("--data", type=str, default="data/twi/")
     parser.add_argument("--output", type=str, default="models/router/")
-    parser.add_argument("--language", type=str, default="akan")
+    parser.add_argument("--language", type=str, default="twi")
     args = parser.parse_args()
 
     data_dir = Path(args.data)

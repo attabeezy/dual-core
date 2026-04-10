@@ -10,8 +10,8 @@ Implements all 5 experimental groups defined in configs/variants.yaml:
 - Variant E: ASR -> TTS
 
 Usage:
-    python scripts/train_lora.py --group D --data data/akan/ --output checkpoints/
-    python scripts/train_lora.py --group D --config configs/variants.yaml --data data/akan/
+    python scripts/train_lora.py --group D --data data/twi/ --output checkpoints/
+    python scripts/train_lora.py --group D --config configs/variants.yaml --data data/twi/
 
 Designed for Colab T4 GPU execution.
 """
@@ -207,7 +207,7 @@ def train_variant(
     output_dir: Path,
     configs: list[TrainingConfig],
     lora_cfg: dict,
-    language: str = "akan",
+    language: str = "twi",
     tokenizer_path: Path | None = None,
 ) -> None:
     """Train a variant through one or more staged training runs.
@@ -273,9 +273,7 @@ def train_variant(
     model.print_trainable_parameters()
 
     _LANG_FILE_PREFIXES = {
-        "akan":    {"asr": "aka_asr", "tts": "twi_tts"},
-        "yoruba":  {"asr": None,      "tts": "yor_tts"},
-        "swahili": {"asr": None,      "tts": "swa_tts"},
+        "twi": {"asr": "aka_asr", "tts": "pristine_twi"},
     }
     prefixes = _LANG_FILE_PREFIXES.get(language, {"asr": language, "tts": language})
     asr_file = data_dir / f"{prefixes['asr']}_train.jsonl" if prefixes["asr"] else None
@@ -324,8 +322,8 @@ def main() -> None:
         default=None,
         help="Path to WAXAL unified_tokenizer.json. Resizes model embeddings with warm init from Llama.",
     )
-    parser.add_argument("--data", type=str, default="data/akan/")
-    parser.add_argument("--language", type=str, default="akan", choices=["akan", "yoruba", "swahili"])
+    parser.add_argument("--data", type=str, default="data/twi/")
+    parser.add_argument("--language", type=str, default="twi", choices=["twi"])
     parser.add_argument("--output", type=str, default="checkpoints/")
     parser.add_argument(
         "--config",

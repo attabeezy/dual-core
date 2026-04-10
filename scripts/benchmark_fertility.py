@@ -9,13 +9,13 @@ to quantify the reduction in the Tokenization Tax.
 
 Usage:
     # Baseline (Llama tokenizer)
-    python scripts/benchmark_fertility.py --tokenizer meta-llama/Llama-3.2-1B --test-file data/akan/twi_tts_test.jsonl
+    python scripts/benchmark_fertility.py --tokenizer meta-llama/Llama-3.2-1B --test-file data/twi/pristine_twi_test.jsonl
 
     # WAXAL unified tokenizer
-    python scripts/benchmark_fertility.py --tokenizer models/tokenizers/akan/unified_tokenizer.json --waxal --test-file data/akan/twi_tts_test.jsonl
+    python scripts/benchmark_fertility.py --tokenizer models/tokenizers/twi/unified_tokenizer.json --waxal --test-file data/twi/pristine_twi_test.jsonl
 
     # Compare both
-    python scripts/benchmark_fertility.py --tokenizer meta-llama/Llama-3.2-1B --waxal-tokenizer models/tokenizers/akan/unified_tokenizer.json --test-file data/akan/twi_tts_test.jsonl --compare
+    python scripts/benchmark_fertility.py --tokenizer meta-llama/Llama-3.2-1B --waxal-tokenizer models/tokenizers/twi/unified_tokenizer.json --test-file data/twi/pristine_twi_test.jsonl --compare
 """
 
 import argparse

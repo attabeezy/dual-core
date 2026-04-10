@@ -27,12 +27,12 @@ class DualCoreTokenizer:
 
     Args:
         tokenizer_path: Path to the unified tokenizer JSON file.
-        language: Target language for routing (e.g. 'akan').
+        language: Target language for routing (e.g. 'twi').
         router_model_dir: Directory containing trained router .pkl files.
 
     Example:
         >>> tokenizer = DualCoreTokenizer(
-        ...     tokenizer_path="models/tokenizers/akan/unified_tokenizer.json",
+        ...     tokenizer_path="models/tokenizers/twi/unified_tokenizer.json",
         ... )
         >>> tokenizer.classify("uhm chale me dwo o")
         'robust'
@@ -43,7 +43,7 @@ class DualCoreTokenizer:
     def __init__(
         self,
         tokenizer_path: str | Path,
-        language: str = "akan",
+        language: str = "twi",
         router_model_dir: str | Path = "models/router/",
     ):
         tokenizer_file = Path(tokenizer_path)

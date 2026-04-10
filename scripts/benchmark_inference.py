@@ -11,10 +11,10 @@ scripts/benchmark_fertility.py for tokenizer-only evaluation on cloud hardware.
 
 Usage:
     # GGUF model (edge deployment)
-    python scripts/benchmark_inference.py --model models/gguf/model-Q4_K_M.gguf --test-file data/akan/twi_tts_test.jsonl
+    python scripts/benchmark_inference.py --model models/gguf/model-Q4_K_M.gguf --test-file data/twi/pristine_twi_test.jsonl
 
     # HuggingFace model (pre-export validation)
-    python scripts/benchmark_inference.py --model checkpoints/variant_D/final/ --huggingface --test-file data/akan/twi_tts_test.jsonl
+    python scripts/benchmark_inference.py --model checkpoints/variant_D/final/ --huggingface --test-file data/twi/pristine_twi_test.jsonl
 """
 
 import argparse

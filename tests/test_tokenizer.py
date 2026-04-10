@@ -22,9 +22,9 @@ def mock_tokenizer_file(tmp_path):
     return tokenizer_path
 
 def test_dual_core_tokenizer_init(mock_tokenizer_file):
-    tokenizer = DualCoreTokenizer(tokenizer_path=mock_tokenizer_file, language="akan")
+    tokenizer = DualCoreTokenizer(tokenizer_path=mock_tokenizer_file, language="twi")
     assert isinstance(tokenizer._tokenizer, PreTrainedTokenizerFast)
-    assert tokenizer.router.language == "akan"
+    assert tokenizer.router.language == "twi"
 
 def test_dual_core_tokenizer_classify(mock_tokenizer_file):
     tokenizer = DualCoreTokenizer(tokenizer_path=mock_tokenizer_file)

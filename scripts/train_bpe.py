@@ -7,7 +7,7 @@ model. Stream-specific token statistics are saved as metadata so the
 DualCoreTokenizer knows which tokens are ASR- or TTS-dominant.
 
 Usage:
-    python scripts/train_bpe.py --input data/akan/ --output models/tokenizers/ --vocab-size 8000
+    python scripts/train_bpe.py --input data/twi/ --output models/tokenizers/ --vocab-size 8000
 """
 
 import argparse
@@ -23,9 +23,7 @@ from tokenizers import Tokenizer
 
 # Mirrors download.py DATASET_CONFIGS — must stay in sync.
 LANG_FILE_PREFIXES: dict[str, dict[str, str | None]] = {
-    "akan":    {"asr": "aka_asr", "tts": "twi_tts"},
-    "yoruba":  {"asr": None,      "tts": "yor_tts"},
-    "swahili": {"asr": None,      "tts": "swa_tts"},
+    "twi": {"asr": "aka_asr", "tts": "pristine_twi"},
 }
 
 
@@ -157,10 +155,10 @@ def train_unified_tokenizer(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Train unified BPE vocabulary")
-    parser.add_argument("--input", type=str, default="data/akan/")
+    parser.add_argument("--input", type=str, default="data/twi/")
     parser.add_argument("--output", type=str, default="models/tokenizers/")
     parser.add_argument("--vocab-size", type=int, default=8000)
-    parser.add_argument("--language", type=str, default="akan")
+    parser.add_argument("--language", type=str, default="twi")
     args = parser.parse_args()
 
     input_dir = Path(args.input)
