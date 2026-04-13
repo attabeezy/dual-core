@@ -24,6 +24,7 @@ from tokenizers import Tokenizer
 # Mirrors download.py DATASET_CONFIGS — must stay in sync.
 LANG_FILE_PREFIXES: dict[str, dict[str, str | None]] = {
     "twi": {"asr": "aka_asr", "tts": "pristine_twi"},
+    "akan": {"asr": "aka_asr", "tts": "pristine_twi"},
 }
 
 

@@ -148,11 +148,13 @@ def convert_to_gguf(model_dir: Path, output_dir: Path, quantization: str = "Q4_K
 
     tools = find_llama_cpp()
     if tools is None:
+        print("\nERROR: llama.cpp conversion tools not found.")
+        print("To export to GGUF, you must:")
+        print("  1. Clone llama.cpp: git clone https://github.com/ggerganov/llama.cpp")
+        print("  2. Build it (make or cmake) to generate 'llama-quantize'")
+        print("  3. Ensure it is in a sibling directory or on your PATH.\n")
         raise FileNotFoundError(
-            "llama.cpp tools not found. Either:\n"
-            "  1. Clone llama.cpp into a sibling directory:  git clone https://github.com/ggerganov/llama.cpp\n"
-            "     then build it: cd llama.cpp && make\n"
-            "  2. Add llama-quantize and convert-hf-to-gguf.py to PATH"
+            "llama.cpp tools (convert-hf-to-gguf.py and llama-quantize) not found."
         )
 
     convert_script, quantize_bin = tools

@@ -78,7 +78,16 @@ def measure_fertility_hf(tokenizer_id: str, texts: list[str]) -> FertilityResult
     from transformers import AutoTokenizer
 
     print(f"Loading HuggingFace tokenizer: {tokenizer_id}")
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_id)
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_id)
+    except Exception as e:
+        print(f"\nERROR: Failed to load tokenizer '{tokenizer_id}'.")
+        if "meta-llama" in tokenizer_id.lower():
+            print("This is a gated model. Please ensure you have:")
+            print(f"  1. Requested access at: https://huggingface.co/{tokenizer_id}")
+            print("  2. Set your HF_TOKEN environment variable (e.g. 'set HF_TOKEN=your_token').")
+        print(f"Details: {e}\n")
+        raise e
 
     total_tokens, total_words = 0, 0
     per_sample = []

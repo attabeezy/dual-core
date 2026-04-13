@@ -29,6 +29,7 @@ dependencies = [
     "transformers>=4.40.0",
     "tokenizers>=0.15.0",
     "psutil>=5.9.0",
+    "python-dotenv>=1.0.1",
 ]
 
 [project.optional-dependencies]
@@ -45,6 +46,8 @@ train = [
     "accelerate>=0.29.0",
     "torch>=2.2.0",
     "sentencepiece>=0.2.0",
+    "pyyaml>=6.0.1",
+    "scikit-learn>=1.4.0",
 ]
 edge = [
     "llama-cpp-python>=0.2.60",

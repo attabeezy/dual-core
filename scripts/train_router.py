@@ -17,6 +17,7 @@ from pathlib import Path
 # Mirrors download.py DATASET_CONFIGS — must stay in sync.
 LANG_FILE_PREFIXES: dict[str, dict[str, str | None]] = {
     "twi": {"asr": "aka_asr", "tts": "pristine_twi"},
+    "akan": {"asr": "aka_asr", "tts": "pristine_twi"},
 }
 
 
@@ -27,15 +28,20 @@ def load_labeled_texts(data_dir: Path, language: str) -> tuple[list[str], list[i
 
     Args:
         data_dir: Directory containing JSONL files.
-        language: Language code (e.g. 'twi').
+        language: Language code (e.g. 'twi' or 'akan').
 
     Returns:
         Tuple of (texts, labels).
     """
     texts, labels = [], []
 
+    if language not in LANG_FILE_PREFIXES:
+        print(f"ERROR: Language '{language}' not supported. Options: {list(LANG_FILE_PREFIXES.keys())}")
+        return [], []
+
     prefixes = LANG_FILE_PREFIXES[language]
     asr_file = data_dir / f"{prefixes['asr']}_train.jsonl" if prefixes["asr"] else None
+    # download.py saves pristine_twi_train.jsonl (always uses pristine_twi as prefix)
     tts_file = data_dir / f"{prefixes['tts']}_train.jsonl"
 
     for path, label in [(asr_file, 0), (tts_file, 1)]:
