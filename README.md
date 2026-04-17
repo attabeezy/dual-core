@@ -1,4 +1,4 @@
-# project-soma
+# dual-core
 
 **Eliminating the Tokenization Tax for Twi via Dual-Stream Tokenization**
 
