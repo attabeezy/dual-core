@@ -1,4 +1,4 @@
-"""Metrics used by Dual-Core experiments."""
+"""Metrics used by Akan-BPE experiments."""
 
 from __future__ import annotations
 

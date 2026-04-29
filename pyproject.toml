@@ -3,16 +3,16 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dual-core"
+name = "akan-bpe"
 version = "0.1.0"
-description = "Tokenizer-only Twi experiments for studying the Tokenization Tax"
+description = "Tokenizer-only Akan experiments for studying the Tokenization Tax"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
-    {name = "Dual-Core Team"}
+    {name = "Akan-BPE Team"}
 ]
-keywords = ["nlp", "tokenization", "twi", "tokenizer", "bpe"]
+keywords = ["nlp", "tokenization", "akan", "twi", "tokenizer", "bpe"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -41,7 +41,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["dual_core*"]
+include = ["akan_bpe*"]
 
 [tool.black]
 line-length = 100

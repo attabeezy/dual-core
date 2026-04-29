@@ -1,4 +1,4 @@
-"""Dataset loading and normalization helpers for Dual-Core."""
+"""Dataset loading and normalization helpers for Akan-BPE."""
 
 from __future__ import annotations
 

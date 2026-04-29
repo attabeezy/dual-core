@@ -1,8 +1,8 @@
 import json
 from pathlib import Path
 
-from dual_core.experiment import ExperimentTokenizer, run_fertility_experiment
-from dual_core.tokenizers import train_bpe_tokenizer
+from akan_bpe.experiment import ExperimentTokenizer, run_fertility_experiment
+from akan_bpe.tokenizers import train_bpe_tokenizer
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, str]]) -> None:

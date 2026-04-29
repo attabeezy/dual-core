@@ -1,4 +1,4 @@
-"""Tokenizer training and loading utilities for Dual-Core."""
+"""Tokenizer training and loading utilities for Akan-BPE."""
 
 from __future__ import annotations
 

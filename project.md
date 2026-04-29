@@ -1,8 +1,8 @@
-# Dual-Core — Project Reference
-**Eliminating the Tokenization Tax for Twi via Dual-Stream Tokenizer Experiments**
+# Akan-BPE — Project Reference
+**Eliminating the Tokenization Tax for Akan via BPE Tokenizer Experiments**
 
 **Status:** Phase 1, tokenizer-only  
-**Scope:** Twi only  
+**Scope:** Akan, currently Twi-first  
 **Current hardware target:** CPU or Colab for tokenizer training and fertility benchmarking  
 **Future hardware target:** Dell Latitude 7400 for downstream deployment experiments
 
@@ -10,16 +10,16 @@
 
 ## 1. Vision
 
-Dual-Core is a Twi-focused research project investigating the "Tokenization Tax":
+Akan-BPE is an Akan-focused research project investigating the "Tokenization Tax":
 the tendency for African languages to require far more tokens than English under
 standard LLM tokenizers, increasing latency, cost, and fragmentation.
 
 The current project is intentionally narrow.
 
-Dual-Core is not yet a model-training or deployment project. The current phase only asks:
+Akan-BPE is not yet a model-training or deployment project. The current phase only asks:
 
-- can specialized Twi tokenizers outperform a baseline tokenizer?
-- does ASR-style Twi benefit from a different vocabulary than formal Twi?
+- can specialized Akan tokenizers outperform a baseline tokenizer?
+- does ASR-style Akan benefit from a different vocabulary than formal Akan?
 - is one mixed tokenizer enough, or do two specialized tokenizers appear justified?
 
 ---
@@ -30,7 +30,7 @@ The active scope is tokenizer work only.
 
 Included in scope:
 
-- Twi data collection and normalization
+- Akan data collection and normalization
 - BPE tokenizer training
 - tokenizer comparison across ASR and formal text
 - token fertility benchmarking
@@ -50,20 +50,20 @@ These remain future directions, not current deliverables.
 
 ## 3. Core Idea
 
-Twi appears to contain at least two useful text regimes:
+Akan appears to contain at least two useful text regimes:
 
-1. **ASR / spontaneous Twi**
+1. **ASR / spontaneous Akan**
    This is noisy, conversational, and often includes fillers, short forms, and code-switching.
 
-2. **Formal / TTS-like Twi**
+2. **Formal / TTS-like Akan**
    This is cleaner, more structured, and more semantically dense.
 
 The main hypothesis is simple:
 
-- a tokenizer trained on ASR-style Twi may tokenize ASR-like input more efficiently
-- a tokenizer trained on formal Twi may tokenize formal input more efficiently
+- a tokenizer trained on ASR-style Akan may tokenize ASR-like input more efficiently
+- a tokenizer trained on formal Akan may tokenize formal input more efficiently
 
-Before building routers or model paths, Dual-Core first needs to verify that this specialization is real.
+Before building routers or model paths, Akan-BPE first needs to verify that this specialization is real.
 
 ---
 
@@ -71,7 +71,7 @@ Before building routers or model paths, Dual-Core first needs to verify that thi
 
 The current phase asks:
 
-**Do specialized Twi tokenizers show measurable advantages over a standard baseline tokenizer, and over each other, on different Twi text regimes?**
+**Do specialized Akan tokenizers show measurable advantages over a standard baseline tokenizer, and over each other, on different Akan text regimes?**
 
 More concretely:
 
@@ -83,12 +83,12 @@ More concretely:
 
 ## 5. Data Sources
 
-Dual-Core uses two Twi datasets:
+Akan-BPE uses two Akan datasets:
 
 ### 5.1 WAXAL `aka_asr`
 
 - Source: `google/WaxalNLP`
-- Type: spontaneous Twi/Akan ASR transcriptions
+- Type: spontaneous Akan ASR transcriptions
 - Characteristics:
   - conversational
   - noisy
@@ -98,7 +98,7 @@ Dual-Core uses two Twi datasets:
 ### 5.2 Pristine-Twi
 
 - Source: Ghana NLP `pristine-twi`
-- Type: clean formal Twi text
+- Type: clean formal Akan text
 - Characteristics:
   - structured
   - grammatically cleaner
@@ -146,8 +146,8 @@ Target benchmark table:
 | Tokenizer | ASR Test Fertility | TTS Test Fertility | Interpretation |
 |---|---:|---:|---|
 | Control | baseline | baseline | Standard reference |
-| Variant A | ? | ? | Expected strength on ASR-style Twi |
-| Variant B | ? | ? | Expected strength on formal Twi |
+| Variant A | ? | ? | Expected strength on ASR-style Akan |
+| Variant B | ? | ? | Expected strength on formal Akan |
 | Variant C | ? | ? | Mixed compromise candidate |
 
 This table is the primary deliverable for phase 1.
@@ -187,7 +187,7 @@ Any of those are valid findings.
 
 The current recommended workflow is:
 
-### Step 1: Download and normalize Twi data
+### Step 1: Download and normalize Akan data
 
 Use `download.py` to create standardized JSONL files under `data/`.
 
@@ -242,15 +242,15 @@ Only after that should the project consider routing or model work.
 The current project should be understood through this simplified structure:
 
 ```text
-dual_core/
-├── data/                        # normalized Twi datasets
+akan_bpe/
+├── data/                        # normalized Akan datasets
 ├── models/                      # trained tokenizer artifacts
 ├── results/                     # benchmark outputs
 ├── scripts/
 │   ├── download.py              # dataset download and normalization
 │   ├── train_bpe.py             # tokenizer training
 │   └── benchmark_fertility.py
-├── dual_core/                       # thin helpers for tokenizer-only experiments
+├── akan_bpe/                       # thin helpers for tokenizer-only experiments
 ├── tests/
 ├── README.md
 └── project.md
@@ -286,7 +286,7 @@ Optional metadata:
 
 ### 11.3 Benchmark outputs
 
-Dual-Core should use one simple rule:
+Akan-BPE should use one simple rule:
 
 - one experiment run produces one JSON file
 
@@ -327,26 +327,26 @@ This phase should produce a clear result before the repo takes on more complexit
 
 Phase 1 is not trying to prove:
 
-- better Twi reasoning by a model
+- better Akan reasoning by a model
 - better generation quality
 - better LoRA adaptation
 - better edge deployment performance
 
 Those are important, but they belong to later phases.
 
-The only thing phase 1 must prove is whether specialized tokenizers for Twi are worth pursuing.
+The only thing phase 1 must prove is whether specialized tokenizers for Akan are worth pursuing.
 
 ---
 
 ## 14. Future Directions
 
-If phase 1 shows strong specialization effects, Dual-Core can expand in carefully staged steps.
+If phase 1 shows strong specialization effects, Akan-BPE can expand in carefully staged steps.
 
 ### 14.1 Router / mux experiment
 
 If Variant A and Variant B each win on their own text regime, the next logical step is:
 
-- train a router to classify incoming Twi text as ASR-like or formal
+- train a router to classify incoming Akan text as ASR-like or formal
 - route the input to the most appropriate tokenizer
 
 This would test whether a dual-tokenizer system is better than always using one tokenizer.
@@ -378,11 +378,11 @@ If tokenizer and routing experiments succeed, future work may include:
 - benchmarking on the Dell Latitude 7400
 - measuring latency, tokens per second, and memory use
 
-### 14.5 Twi task evaluation
+### 14.5 Akan task evaluation
 
 A later evaluation phase may test whether tokenizer gains translate to useful model behavior on tasks such as:
 
-- Twi QA
+- Akan QA
 - instruction following
 - curated prompt-response evaluation
 
@@ -392,9 +392,9 @@ This should only happen after the tokenizer question is clearly answered.
 
 ## 15. Recommended Near-Term Deliverable
 
-A successful near-term Dual-Core deliverable is:
+A successful near-term Akan-BPE deliverable is:
 
-1. normalized Twi ASR and TTS datasets
+1. normalized Akan ASR and TTS datasets
 2. three trained tokenizer variants: ASR, TTS, mixed
 3. baseline comparison against a standard pretrained tokenizer
 4. one unified experiment JSON containing the fertility comparison across ASR and TTS test sets

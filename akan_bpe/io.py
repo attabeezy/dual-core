@@ -1,4 +1,4 @@
-"""Low-level file helpers for Dual-Core."""
+"""Low-level file helpers for Akan-BPE."""
 
 from __future__ import annotations
 

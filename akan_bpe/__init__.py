@@ -1,8 +1,8 @@
-"""Dual-Core tokenizer-only toolkit for Twi experiments."""
+"""Akan-BPE tokenizer-only toolkit for Akan experiments."""
 
-from dual_core.experiment import ExperimentTokenizer, run_fertility_experiment
-from dual_core.metrics import FertilityResult, compute_fertility
-from dual_core.tokenizers import (
+from akan_bpe.experiment import ExperimentTokenizer, run_fertility_experiment
+from akan_bpe.metrics import FertilityResult, compute_fertility
+from akan_bpe.tokenizers import (
     DEFAULT_SPECIAL_TOKENS,
     build_tokenizer_stats,
     load_tokenizer,

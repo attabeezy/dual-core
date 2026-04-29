@@ -1,4 +1,4 @@
-from dual_core.metrics import compute_fertility
+from akan_bpe.metrics import compute_fertility
 
 
 class DummyTokenizer:

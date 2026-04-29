@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download and normalize Twi datasets for Dual-Core."""
+"""Download and normalize Akan datasets for Akan-BPE."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from dual_core.io import write_json, write_jsonl
+from akan_bpe.io import write_json, write_jsonl
 
 
 def _download_asr_split(split: str, limit: int | None) -> list[dict[str, str]]:
@@ -84,7 +84,7 @@ def _split_rows(rows: list[dict[str, str]]) -> dict[str, list[dict[str, str]]]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Download Twi datasets for Dual-Core.")
+    parser = argparse.ArgumentParser(description="Download Akan datasets for Akan-BPE.")
     parser.add_argument("--output-dir", default="data", help="Directory for normalized JSONL files.")
     parser.add_argument("--asr-limit", type=int, default=None, help="Optional limit per ASR split.")
     parser.add_argument(
@@ -98,7 +98,7 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    manifest: dict[str, object] = {"language": "twi", "files": {}}
+    manifest: dict[str, object] = {"language": "akan", "files": {}}
 
     for split in ("train", "validation", "test"):
         rows = _download_asr_split(split, args.asr_limit)

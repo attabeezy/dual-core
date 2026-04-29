@@ -1,6 +1,6 @@
-# dual-core
+# akan-bpe
 
-**Tokenizer-only Twi experiments for studying the Tokenization Tax**
+**Tokenizer-only Akan experiments for studying the Tokenization Tax**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -8,9 +8,9 @@
 ## Overview
 
 Modern LLM tokenizers are optimized for English, resulting in a **Tokenization Tax**
-for languages like Twi. Dual-Core keeps the first phase deliberately small:
+for languages like Akan. Akan-BPE keeps the first phase deliberately small:
 
-- normalize Twi ASR and formal-text datasets
+- normalize Akan ASR and formal-text datasets
 - train tokenizer variants for `asr`, `tts`, and `mixed`
 - compare them against a baseline tokenizer in one unified fertility experiment JSON
 
@@ -18,15 +18,15 @@ for languages like Twi. Dual-Core keeps the first phase deliberately small:
 
 | Stream | Source | Notes |
 |--------|--------|-------|
-| **ASR** | `google/WaxalNLP` - `aka_asr` | Noisy Twi/Akan speech transcriptions |
-| **Formal** | `ghananlpcommunity/pristine-twi-english` | Clean, structured Twi text |
+| **ASR** | `google/WaxalNLP` - `aka_asr` | Noisy Akan speech transcriptions |
+| **Formal** | `ghananlpcommunity/pristine-twi-english` | Clean, structured Akan text |
 
 ## Active Components
 
-- `scripts/download.py` - download and normalize Twi datasets into `data/`
+- `scripts/download.py` - download and normalize Akan datasets into `data/`
 - `scripts/train_bpe.py` - train one tokenizer variant per run
 - `scripts/benchmark_fertility.py` - compare tokenizers in one unified experiment
-- `dual_core/` - thin helpers for JSONL loading, tokenizer training, fertility metrics, and experiment assembly
+- `akan_bpe/` - thin helpers for JSONL loading, tokenizer training, fertility metrics, and experiment assembly
 
 ## Quick Start
 
@@ -91,7 +91,7 @@ Lower fertility means the tokenizer needs fewer tokens per word on the same text
 
 ## Output Contract
 
-Dual-Core keeps experiment output simple:
+Akan-BPE keeps experiment output simple:
 
 - one tokenizer training run writes one tokenizer artifact and one optional stats JSON
 - one benchmark experiment writes one unified JSON
@@ -113,15 +113,15 @@ The unified experiment JSON contains:
 ## Project Structure
 
 ```text
-Dual-Core/
-├── data/                  # Twi datasets (gitignored)
+Akan-BPE/
+├── data/                  # Akan datasets (gitignored)
 ├── models/                # Tokenizer artifacts (gitignored)
 ├── results/               # Unified experiment outputs
 ├── scripts/
 │   ├── download.py
 │   ├── train_bpe.py
 │   └── benchmark_fertility.py
-├── dual_core/
+├── akan_bpe/
 ├── tests/
 ├── pyproject.toml
 ├── Makefile

@@ -22,3 +22,7 @@ logs/
 .DS_Store
 .idea/
 .vscode/
+
+# Experiments
+# (results/*.json are generated - not tracked)
+report.md

@@ -1,13 +1,13 @@
-"""Experiment orchestration for Dual-Core fertility comparisons."""
+"""Experiment orchestration for Akan-BPE fertility comparisons."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 
-from dual_core.datasets import load_jsonl_samples, samples_to_texts
-from dual_core.metrics import compute_fertility
-from dual_core.tokenizers import load_tokenizer
+from akan_bpe.datasets import load_jsonl_samples, samples_to_texts
+from akan_bpe.metrics import compute_fertility
+from akan_bpe.tokenizers import load_tokenizer
 
 
 @dataclass(frozen=True)
@@ -67,7 +67,7 @@ def run_fertility_experiment(
 
     return {
         "experiment_id": experiment_id,
-        "language": "twi",
+        "language": "akan",
         "metric": "fertility",
         "formula": "total_tokens / total_words",
         "test_sets": {
